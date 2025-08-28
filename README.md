@@ -61,15 +61,15 @@ Demonstrates the complete cross-app connection workflow:
 
 Shows how to handle transaction requests and message signing:
 
-- **Request Verification**: Using `getVerifiedWalletRequest()` to load and decrypt transaction requests
+- **Request Verification**: Using `getVerifiedTransactionRequest()` to load and decrypt transaction requests
 - **Message Signing**: Integration with Privy's `useSignMessage` hook
-- **Success Responses**: Using `handleSuccess()` to send signed results back to requesters
+- **Success Responses**: Using `handleRequestResult()` to send signed results back to requesters
 - **Transaction Rejection**: Using `rejectRequest()` to decline transaction requests
 - **Comprehensive Error Handling**: Using `handleError()` for various failure scenarios
 
 **Key SDK Functions:**
 
-- `getVerifiedWalletRequest()` - Parse, decrypt, and verify transaction requests from URL parameters
-- `handleSuccess()` - Send encrypted success responses (signatures) back to requester
+- `getVerifiedTransactionRequest()` - Parse, decrypt, and verify transaction requests from URL parameters
+- `handleRequestResult()` - Send encrypted success responses (signatures) back to requester
 - `rejectRequest()` - Send rejection responses for transaction requests
 - `handleError()` - Handle and communicate transaction errors

@@ -5,7 +5,7 @@ import { useLogin, useLogout, usePrivy } from "@privy-io/react-auth";
 import {
   createClient,
   type CrossAppConnectionRequest,
-} from "@privy-io/cross-app-provider";
+} from "@privy-io/cross-app-provider/connect";
 
 /**
  * Demo page showcasing cross-app connection utilities from @privy-io/cross-app-provider
@@ -42,7 +42,7 @@ export default function ConnectDemo() {
   useEffect(() => {
     // Parse URL parameters when component mounts
     try {
-      // Use the client to parse connection parameters - this will automatically populate the requesterOrigin
+      // Use the client to parse connection parameters - this will automatically populate the callbackUrl
       const connectionParams = client.getConnectionRequestFromUrlParams();
 
       setConnectionRequest(connectionParams);
@@ -126,7 +126,7 @@ export default function ConnectDemo() {
       if (
         !connectionRequest ||
         !connectionRequest.requesterPublicKey ||
-        !connectionRequest.requesterOrigin
+        !connectionRequest.callbackUrl
       ) {
         throw new Error("Missing required connection parameters");
       }
@@ -148,7 +148,7 @@ export default function ConnectDemo() {
       }
 
       console.log("🔄 Accepting connection with parameters:", {
-        requesterOrigin: connectionRequest.requesterOrigin,
+        callbackUrl: connectionRequest.callbackUrl,
         requesterPublicKey: connectionRequest.requesterPublicKey,
         appId: process.env.NEXT_PUBLIC_PRIVY_APP_ID || "",
       });
@@ -168,11 +168,11 @@ export default function ConnectDemo() {
 
       // Use client.handleError() for error handling
       const accessToken = await getAccessToken();
-      if (accessToken && connectionRequest.requesterOrigin) {
+      if (accessToken && connectionRequest.callbackUrl) {
         await client.handleError({
           accessToken,
           error: error as Error,
-          requesterOrigin: connectionRequest.requesterOrigin,
+          callbackUrl: connectionRequest.callbackUrl,
         });
       }
 
@@ -188,7 +188,7 @@ export default function ConnectDemo() {
    */
   const handleReject = async () => {
     try {
-      if (!connectionRequest?.requesterOrigin) {
+      if (!connectionRequest?.callbackUrl) {
         console.error("Cannot reject connection - missing required parameters");
         return;
       }
@@ -202,13 +202,13 @@ export default function ConnectDemo() {
 
       console.log(
         "🔄 Rejecting connection to:",
-        connectionRequest.requesterOrigin
+        connectionRequest.callbackUrl
       );
 
       // Use client.rejectConnection() from @privy-io/cross-app-provider
       await client.rejectConnection({
         accessToken,
-        requesterOrigin: connectionRequest.requesterOrigin,
+        callbackUrl: connectionRequest.callbackUrl,
       });
 
       console.log("✅ Connection rejected successfully");
@@ -280,7 +280,7 @@ export default function ConnectDemo() {
           <div className="space-y-2 text-sm">
             <div>
               <strong>From:</strong>{" "}
-              {connectionRequest.requesterOrigin || "Not specified"}
+              {connectionRequest.callbackUrl || "Not specified"}
             </div>
             {connectionRequest.requesterPublicKey && (
               <div>
@@ -339,7 +339,7 @@ export default function ConnectDemo() {
               </div>
               <div>
                 <strong>client.getConnectionRequestFromUrlParams():</strong>{" "}
-                Parses requester_public_key and requester_origin from URL
+                Parses requester_public_key and callback_url from URL
               </div>
               <div>
                 <strong>client.acceptConnection():</strong> Accepts cross-app

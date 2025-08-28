@@ -10,16 +10,16 @@ import {
 } from "@privy-io/react-auth";
 import {
   createClient,
-  type VerifiedWalletRequest,
-} from "@privy-io/cross-app-provider";
+  type VerifiedTransactionRequest,
+} from "@privy-io/cross-app-provider/connect";
 
 /**
  * Demo page showcasing cross-app transaction utilities from @privy-io/cross-app-provider
  *
  * This page demonstrates:
  * - createClient(): Create a client with pre-filled analytics parameters
- * - client.getVerifiedWalletRequest(): Load and decrypt transaction requests from URL parameters
- * - client.handleSuccess(): Send successful transaction responses back to requester
+ * - client.getVerifiedTransactionRequest(): Load and decrypt transaction requests from URL parameters
+ * - client.handleRequestResult(): Send successful transaction responses back to requester
  * - client.handleError(): Handle and communicate errors back to requester
  * - client.rejectRequest(): Reject transaction requests with pre-filled analytics parameters
  */
@@ -32,7 +32,7 @@ export default function TransactDemo() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [verifiedRequest, setVerifiedRequest] =
-    useState<VerifiedWalletRequest | null>(null);
+    useState<VerifiedTransactionRequest | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Create client instance with simplified configuration
@@ -43,7 +43,7 @@ export default function TransactDemo() {
 
   useEffect(() => {
     /**
-     * Load and verify wallet request using getVerifiedWalletRequest()
+     * Load and verify wallet request using getVerifiedTransactionRequest()
      * This function parses URL parameters and decrypts the transaction request
      */
     const loadRequest = async () => {
@@ -55,9 +55,9 @@ export default function TransactDemo() {
         setError(null);
         console.log("🔄 Loading and verifying wallet request...");
 
-        // Demonstrate client.getVerifiedWalletRequest() - parses and decrypts transaction data
+        // Demonstrate client.getVerifiedTransactionRequest() - parses and decrypts transaction data
         // This will automatically populate the client's analytics parameters
-        const verified = await client.getVerifiedWalletRequest({
+        const verified = await client.getVerifiedTransactionRequest({
           userId: user.id,
         });
 
@@ -76,7 +76,7 @@ export default function TransactDemo() {
             client.handleError({
               accessToken,
               error: err as Error,
-              requesterOrigin: verifiedRequest?.connection.requesterOrigin,
+              callbackUrl: verifiedRequest?.connection.callbackUrl,
             });
           }
         } catch (handleErrorErr) {
@@ -141,7 +141,7 @@ export default function TransactDemo() {
 
   /**
    * Handle transaction signature using Privy's signMessage hook
-   * Then send success response using handleSuccess()
+   * Then send success response using handleRequestResult()
    */
   const handleSign = async () => {
     if (!verifiedRequest) return;
@@ -157,10 +157,10 @@ export default function TransactDemo() {
       const { signature } = await signMessage({ message });
       console.log("✅ Message signed:", signature);
 
-      // Demonstrate client.handleSuccess() - sends encrypted success response back to requester
+      // Demonstrate client.handleRequestResult() - sends encrypted success response back to requester
       const accessToken = await getAccessToken();
       if (accessToken) {
-        await client.handleSuccess({
+        await client.handleRequestResult({
           accessToken,
           result: signature, // The signed message
           connection: verifiedRequest.connection,
@@ -181,7 +181,7 @@ export default function TransactDemo() {
           await client.handleError({
             accessToken,
             error: err as Error,
-            requesterOrigin: verifiedRequest.connection.requesterOrigin,
+            callbackUrl: verifiedRequest.connection.callbackUrl,
           });
         }
       } catch (handleErrorErr) {
@@ -206,7 +206,7 @@ export default function TransactDemo() {
 
       const accessToken = await getAccessToken();
       if (accessToken) {
-        await client.handleSuccess({
+        await client.handleRequestResult({
           accessToken,
           result: hash,
           connection: verifiedRequest.connection,
@@ -221,7 +221,7 @@ export default function TransactDemo() {
         await client.handleError({
           accessToken,
           error: err as Error,
-          requesterOrigin: verifiedRequest.connection.requesterOrigin,
+          callbackUrl: verifiedRequest.connection.callbackUrl,
         });
       }
 
@@ -244,7 +244,7 @@ export default function TransactDemo() {
       if (accessToken) {
         await client.rejectRequest({
           accessToken,
-          requesterOrigin: verifiedRequest.connection.requesterOrigin,
+          callbackUrl: verifiedRequest.connection.callbackUrl,
         });
       }
 
@@ -333,7 +333,7 @@ export default function TransactDemo() {
                 <div>
                   <strong className="text-gray-700">From:</strong>
                   <p className="text-gray-600">
-                    {verifiedRequest.connection.requesterOrigin}
+                    {verifiedRequest.connection.callbackUrl}
                   </p>
                 </div>
 
@@ -391,11 +391,11 @@ export default function TransactDemo() {
             </summary>
             <div className="space-y-2 text-xs">
               <div>
-                <strong>getVerifiedWalletRequest():</strong> Parses and decrypts
+                <strong>getVerifiedTransactionRequest():</strong> Parses and decrypts
                 transaction requests from URL parameters
               </div>
               <div>
-                <strong>handleSuccess():</strong> Sends encrypted success
+                <strong>handleRequestResult():</strong> Sends encrypted success
                 response (signature) back to requester
               </div>
               <div>
