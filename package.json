@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@privy-io/cross-app-provider": "0.0.2",
+    "@privy-io/cross-app-provider": "file:../privy/public-packages/cross-app-provider",
     "@privy-io/react-auth": "^2.21.3",
     "next": "15.4.6",
     "react": "19.1.0",
