@@ -7,7 +7,10 @@ import {
   useSendTransaction,
   useSignMessage,
 } from "@privy-io/react-auth";
-import { createClient } from "@privy-io/cross-app-provider/auth";
+import {
+  createClient,
+  CrossAppAuthTransactionRequest,
+} from "@privy-io/cross-app-provider/auth";
 
 // Create client instance with simplified configuration
 const client = createClient({
@@ -33,12 +36,7 @@ export default function TransactDemo() {
   const { sendTransaction } = useSendTransaction();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [req, setReq] =
-    useState<
-      Awaited<
-        ReturnType<typeof client.getVerifiedTransactionRequestFromUrlParams>
-      >
-    >();
+  const [req, setReq] = useState<CrossAppAuthTransactionRequest | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -50,7 +48,9 @@ export default function TransactDemo() {
       if (!authenticated || !user?.id) {
         return;
       }
-
+      let result: Awaited<
+        ReturnType<typeof client.getVerifiedTransactionRequest>
+      >;
       try {
         setError(null);
         console.log("🔄 Loading and verifying wallet request...");
@@ -62,32 +62,33 @@ export default function TransactDemo() {
 
         // Demonstrate client.getVerifiedWalletRequest() - parses and decrypts transaction data
         // This will automatically populate the client's analytics parameters
-        const verified =
-          await client.getVerifiedTransactionRequestFromUrlParams({
-            accessToken,
-          });
+        result = await client.getVerifiedTransactionRequest({
+          accessToken,
+        });
 
-        setReq(verified);
-        console.log("✅ Verified wallet request:", verified);
+        if (result.verified) {
+          setReq(result.data);
+        } else {
+          // Demonstrate handleError() usage when request verification fails
+          try {
+            const accessToken = await getAccessToken();
+            if (accessToken) {
+              client.handleError({
+                accessToken,
+                error: new Error("User JWT did not verify"),
+                callbackUrl: result.data.callbackUrl,
+              });
+            }
+          } catch (handleErrorErr) {
+            console.error("Failed to send error response:", handleErrorErr);
+          }
+        }
+        console.log("✅ Verified wallet request:", result);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to load request";
         setError(errorMessage);
         console.error("❌ Failed to load request:", err);
-
-        // Demonstrate handleError() usage when request verification fails
-        try {
-          const accessToken = await getAccessToken();
-          if (accessToken) {
-            client.handleError({
-              accessToken,
-              error: err as Error,
-              requesterOrigin: req?.connection.requesterOrigin,
-            });
-          }
-        } catch (handleErrorErr) {
-          console.error("Failed to send error response:", handleErrorErr);
-        }
       }
     };
 
@@ -150,13 +151,12 @@ export default function TransactDemo() {
    * Then send success response using handleSuccess()
    */
   const handleSign = async () => {
-    if (!req || !req.verified) return;
+    if (!req) return;
 
     setIsLoading(true);
     setError(null);
 
-    const message = req.data.request.content.request.request
-      .params[0] as string;
+    const message = req.request.content.request.request.params[0] as string;
     try {
       console.log("🔄 Signing message:", message);
 
@@ -170,7 +170,7 @@ export default function TransactDemo() {
         await client.handleRequestResult({
           accessToken,
           result: signature, // The signed message
-          callbackUrl: req.data.request.callbackUrl,
+          callbackUrl: req.request.callbackUrl,
         });
       }
 
@@ -188,7 +188,7 @@ export default function TransactDemo() {
           await client.handleError({
             accessToken,
             error: err as Error,
-            requesterOrigin: req.connection.requesterOrigin,
+            callbackUrl: req.request.callbackUrl,
           });
         }
       } catch (handleErrorErr) {
@@ -206,17 +206,17 @@ export default function TransactDemo() {
 
     try {
       const { hash } = await sendTransaction({
-        to: req.request.params[0] as string,
-        value: req.request.params[1] as string,
+        to: req.request.content.request.request.params[0] as string,
+        value: req.request.content.request.request.params[1] as string,
       });
       console.log("✅ Transaction sent:", hash);
 
       const accessToken = await getAccessToken();
       if (accessToken) {
-        await client.handleSuccess({
+        await client.handleRequestResult({
           accessToken,
           result: hash,
-          connection: req.connection,
+          callbackUrl: req.request.callbackUrl,
         });
       }
     } catch (err) {
@@ -228,7 +228,7 @@ export default function TransactDemo() {
         await client.handleError({
           accessToken,
           error: err as Error,
-          requesterOrigin: req.connection.requesterOrigin,
+          callbackUrl: req.request.callbackUrl,
         });
       }
 
@@ -251,7 +251,7 @@ export default function TransactDemo() {
       if (accessToken) {
         await client.rejectRequest({
           accessToken,
-          requesterOrigin: req.connection.requesterOrigin,
+          callbackUrl: req.request.callbackUrl,
         });
       }
 
@@ -262,7 +262,7 @@ export default function TransactDemo() {
     }
   };
 
-  if (!req || !req.verified) {
+  if (!req) {
     return <div>No</div>;
   }
 
@@ -343,23 +343,21 @@ export default function TransactDemo() {
               <div className="space-y-3 text-sm">
                 <div>
                   <strong className="text-gray-700">From:</strong>
-                  <p className="text-gray-600">
-                    {req.data.request.callbackUrl}
-                  </p>
+                  <p className="text-gray-600">{req.request.callbackUrl}</p>
                 </div>
 
                 <div>
                   <strong className="text-gray-700">Request type:</strong>
                   <p className="text-gray-600">
-                    {req.data.request.content.request.request.method}
+                    {req.request.content.request.request.method}
                   </p>
                 </div>
-                {req.data.request.content.request.request.params && (
+                {req.request.content.request.request.params && (
                   <div>
                     <strong className="text-gray-700">Parameters:</strong>
                     <pre className="mt-1 text-xs bg-gray-100 p-2 rounded overflow-auto">
                       {JSON.stringify(
-                        req.data.request.content.request.request.params,
+                        req.request.content.request.request.params,
                         null,
                         2
                       )}
@@ -431,7 +429,7 @@ export default function TransactDemo() {
                 <div>
                   <strong>Raw URL parameters:</strong>
                   <pre className="mt-1 bg-gray-100 p-2 rounded text-xs overflow-auto">
-                    {JSON.stringify(req?.data, null, 2)}
+                    {JSON.stringify(req, null, 2)}
                   </pre>
                 </div>
                 {req && (
