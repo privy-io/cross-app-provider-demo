@@ -1,5 +1,7 @@
 # Cross-app provider demo
 
+> **This repository is archived.** For up-to-date examples, please visit [github.com/privy-io/examples](https://github.com/privy-io/examples).
+
 A comprehensive demo application showcasing the `@privy-io/cross-app-provider` SDK utilities for implementing secure cross-app wallet connections and transactions.
 
 ## 🎯 Purpose
